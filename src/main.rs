@@ -110,6 +110,11 @@ fn main() {
     let full_range = Span { min, max };
     let rand_num: u32 = rand::thread_rng().gen_range(min, max+1);
 
+    let n_guesses = 5;
+    let mut guesses_left = n_guesses;
+    let mut input: String;
+    let mut guess: u32 = min - 1;
+
     let mut selection = Span { min, max };
     let mut hint: String = "/".to_string();
 
@@ -119,25 +124,43 @@ fn main() {
         println!("Guess the number I'm thinking of... {}", rand_num);
         print!("\n");
 
+        println!("Number of guesses remaining: {}", guesses_left);
+        print!("\n");
+
         print_view(&full_range, &selection);
+        print!("\n");
+
         println!("Hint: {}", hint);
         print!("\n");
+
+        if guess == rand_num {
+            println!("{}", fg(Color::Green, "You win!"));
+            break;
+        } else if guesses_left == 0 {
+            println!("{}", fg(Color::Red, "You lose :("));
+            println!("The number was {}.", rand_num);
+            break;
+        }
 
         print!("Enter your guess: ");
         io::stdout().flush().unwrap();
 
-        let mut guess = String::new();
-        io::stdin().read_line(&mut guess).unwrap();
-        let guess: u32 = match guess.trim().parse() {
-            Ok(num) => num,
+        input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        guess = match input.trim().parse() {
+            Ok(num) => {
+                guesses_left -= 1;
+                num
+            },
             Err(_) => {
                 hint = fg(Color::Red, "Invalid: Not a number");
                 continue;
             }
         };
 
-        if guess > max || guess < min {
+        if guess < selection.min || guess > selection.max {
             hint = fg(Color::Red, "Out of bounds");
+            guesses_left += 1;
             continue;
         }
 
@@ -151,8 +174,7 @@ fn main() {
                 selection.max = guess - 1;
             },
             Ordering::Equal => {
-                println!("\n{}", fg(Color::Green, "You win!"));
-                break;
+                hint = fg(Color::Green, "Correct")
             }
         }
     }
