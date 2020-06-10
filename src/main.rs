@@ -20,35 +20,32 @@ enum Color {
     White = 7,
 }
 
-fn reset_screen() {
-    print!("\x1b[H\x1b[J\r");
+macro_rules! reset_screen {
+    () => ( print!("\x1b[H\x1b[J\r") )
 }
 
 macro_rules! repeat_char {
-    ($c: literal, $n: expr) => {
-        (0..$n).map(|_| $c).collect::<String>();
-    }
+    ($c: expr, $n: expr) => ( &(0..$n).map(|_| $c).collect::<String>() )
 }
 
-fn colorize(style: Style, color: Color, text: &str) -> String {
-    format!(
+macro_rules! colorize {
+    ($style: expr, $color: expr, $text: expr) => ( format!(
         "\x1b[{}{}m{}\x1b[0m",
-        style as u8,
-        color as u8,
-        text
-    ).to_string()
+        $style as u8,
+        $color as u8,
+        $text
+    ) )
 }
 
-fn fg(color: Color, text: &str) -> String {
-    colorize(Style::Fg, color, text)
+macro_rules! fg {
+    ($color: expr, $text: expr) => ( colorize!(Style::Fg, $color, $text) )
 }
 
 macro_rules! num_digits {
-    ($num: expr) => {
-        $num.to_string().len();
-    }
+    ($num: expr) => ( $num.to_string().len() )
 }
 
+#[derive(Clone)]
 struct Span {
     min: u32,
     max: u32
@@ -58,6 +55,10 @@ impl Span {
     fn range(&self) -> usize {
         (self.max - self.min) as usize
     }
+
+    fn contains(&self, num: u32) -> bool {
+        self.min <= num && num <= self.max
+    }
 }
 
 /**
@@ -65,30 +66,30 @@ impl Span {
  * [----(-----)----]
  *  ^    ^   ^    ^
  *  |    |   |    max
- *  |    |   end selection
- *  |    begin selection
+ *  |    |   end range
+ *  |    begin range
  *  min
  *
  *  bounds = (min, max)
- *  selected = (begin, end)
+ *  range = (begin, end)
  */
-fn print_view(bounds: &Span, selected: &Span) {
+fn print_view(bounds: &Span, range: &Span) {
     // Number of characters before first '=' in view
     let prefix_w: usize = num_digits!(bounds.min) + 2;
 
     // Segment before range
-    let seg_before: String = repeat_char!('=', selected.min-bounds.min);
+    let seg_before: &str = repeat_char!('=', range.min-bounds.min);
 
     // Segment range
-    let n_range: usize = selected.range() + 1;
-    let seg_range: String = fg(Color::Green, &repeat_char!('=', n_range));
+    let n_range: usize = range.range() + 1;
+    let seg_range: String = fg!(Color::Green, repeat_char!('=', n_range));
 
     // Segment after range
-    let seg_after: String = repeat_char!('=', bounds.max-selected.max);
+    let seg_after: &str = repeat_char!('=', bounds.max-range.max);
 
     // Caret: beginning of seg_range
     let caret_begin_w: usize = prefix_w + seg_before.len() + 1;
-    println!("{0:>1$}", selected.min, caret_begin_w);
+    println!("{0:>1$}", range.min, caret_begin_w);
     println!("{0:>1$}", "v", caret_begin_w);
 
     // View
@@ -101,7 +102,7 @@ fn print_view(bounds: &Span, selected: &Span) {
     // Caret: end of range
     let caret_end_w: usize = prefix_w + seg_before.len() + n_range;
     println!("{0:>1$}", "^", caret_end_w);
-    println!("{0:>1$}", selected.max, caret_end_w);
+    println!("{0:>1$}", range.max, caret_end_w);
 }
 
 fn main() {
@@ -115,11 +116,11 @@ fn main() {
     let mut input: String;
     let mut guess: u32 = min - 1;
 
-    let mut selection = Span { min, max };
+    let mut range = full_range.clone();
     let mut hint: String = "/".to_string();
 
     loop {
-        reset_screen();
+        reset_screen!();
 
         println!("Guess the number I'm thinking of... {}", rand_num);
         print!("\n");
@@ -127,17 +128,17 @@ fn main() {
         println!("Number of guesses remaining: {}", guesses_left);
         print!("\n");
 
-        print_view(&full_range, &selection);
+        print_view(&full_range, &range);
         print!("\n");
 
         println!("Hint: {}", hint);
         print!("\n");
 
         if guess == rand_num {
-            println!("{}", fg(Color::Green, "You win!"));
+            println!("{}", fg!(Color::Green, "You win!"));
             break;
         } else if guesses_left == 0 {
-            println!("{}", fg(Color::Red, "You lose :("));
+            println!("{}", fg!(Color::Red, "You lose :("));
             println!("The number was {}.", rand_num);
             break;
         }
@@ -148,33 +149,31 @@ fn main() {
         input = String::new();
         io::stdin().read_line(&mut input).unwrap();
         guess = match input.trim().parse() {
-            Ok(num) => {
-                guesses_left -= 1;
-                num
-            },
+            Ok(num) => num,
             Err(_) => {
-                hint = fg(Color::Red, "Invalid: Not a number");
+                hint = fg!(Color::Red, "Invalid: Not a number");
                 continue;
             }
         };
 
-        if guess < selection.min || guess > selection.max {
-            hint = fg(Color::Red, "Out of bounds");
-            guesses_left += 1;
+        if range.contains(guess) == false {
+            hint = fg!(Color::Red, "Out of bounds");
             continue;
         }
 
-        match guess.cmp(&rand_num) {
+        guesses_left -= 1;
+
+        hint = match guess.cmp(&rand_num) {
             Ordering::Less => {
-                hint = fg(Color::Yellow, "Too small");
-                selection.min = guess + 1;
+                range.min = guess + 1;
+                fg!(Color::Yellow, "Too small")
             },
             Ordering::Greater => {
-                hint = fg(Color::Yellow, "Too big");
-                selection.max = guess - 1;
+                range.max = guess - 1;
+                fg!(Color::Yellow, "Too big")
             },
             Ordering::Equal => {
-                hint = fg(Color::Green, "Correct")
+                fg!(Color::Green, "Correct")
             }
         }
     }
