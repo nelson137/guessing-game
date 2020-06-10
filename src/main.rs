@@ -43,14 +43,20 @@ fn fg(color: Color, text: &str) -> String {
     colorize(Style::Fg, color, text)
 }
 
+macro_rules! num_digits {
+    ($num: expr) => {
+        $num.to_string().len();
+    }
+}
+
 struct Span {
     min: u32,
     max: u32
 }
 
 impl Span {
-    fn range(&self) -> u32 {
-        self.max - self.min
+    fn range(&self) -> usize {
+        (self.max - self.min) as usize
     }
 }
 
@@ -67,16 +73,35 @@ impl Span {
  *  selected = (begin, end)
  */
 fn print_view(bounds: &Span, selected: &Span) {
-    let before_range = repeat_char!('=', selected.min-bounds.min);
-    let range = fg(
-        Color::Green,
-        &repeat_char!('=', selected.range()+1));
-    let after_range = repeat_char!('=', bounds.max-selected.max);
+    // Number of characters before first '=' in view
+    let prefix_w: usize = num_digits!(bounds.min) + 2;
+
+    // Segment before range
+    let seg_before: String = repeat_char!('=', selected.min-bounds.min);
+
+    // Segment range
+    let n_range: usize = selected.range() + 1;
+    let seg_range: String = fg(Color::Green, &repeat_char!('=', n_range));
+
+    // Segment after range
+    let seg_after: String = repeat_char!('=', bounds.max-selected.max);
+
+    // Caret: beginning of seg_range
+    let caret_begin_w: usize = prefix_w + seg_before.len() + 1;
+    println!("{0:>1$}", selected.min, caret_begin_w);
+    println!("{0:>1$}", "v", caret_begin_w);
+
+    // View
     println!(
         "{} [{}{}{}] {}",
         bounds.min,
-        before_range, range, after_range,
+        seg_before, seg_range, seg_after,
         bounds.max);
+
+    // Caret: end of range
+    let caret_end_w: usize = prefix_w + seg_before.len() + n_range;
+    println!("{0:>1$}", "^", caret_end_w);
+    println!("{0:>1$}", selected.max, caret_end_w);
 }
 
 fn main() {
