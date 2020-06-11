@@ -1,7 +1,7 @@
 #[derive(Clone)]
 pub struct Span {
-    pub min: u32,
-    pub max: u32
+    pub min: i32,
+    pub max: i32
 }
 
 impl Span {
@@ -9,7 +9,7 @@ impl Span {
         (self.max - self.min) as usize
     }
 
-    pub fn contains(&self, num: u32) -> bool {
+    pub fn contains(&self, num: i32) -> bool {
         self.min <= num && num <= self.max
     }
 }

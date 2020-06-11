@@ -16,15 +16,15 @@ macro_rules! reset_screen {
 }
 
 fn main() {
-    let min: u32 = 1;
-    let max: u32 = 50;
+    let min: i32 = 1;
+    let max: i32 = 50;
     let full_range = Span { min, max };
-    let rand_num: u32 = rand::thread_rng().gen_range(min, max+1);
+    let rand_num: i32 = rand::thread_rng().gen_range(min, max+1);
 
     let n_guesses = 5;
     let mut guesses_left = n_guesses;
     let mut input: String;
-    let mut guess: u32 = min - 1;
+    let mut guess: i32 = std::i32::MIN;
 
     let mut range = full_range.clone();
     let mut hint: String = "/".to_string();
