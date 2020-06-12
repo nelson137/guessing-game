@@ -60,10 +60,6 @@ fn get_dynamic_max() -> i32 {
     }
 }
 
-macro_rules! reset_screen {
-    () => ( print!("\x1b[H\x1b[J\r") )
-}
-
 fn main() {
     let args = Cli::from_args();
     let app = Cli::clap();
