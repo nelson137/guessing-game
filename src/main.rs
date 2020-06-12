@@ -91,7 +91,10 @@ fn main() {
         println!("Guess the number I'm thinking of...");
         print!("\n");
 
-        println!("Number of guesses remaining: {}", guesses_left);
+        println!(
+            "Number of guesses remaining: {}",
+            Format::Warning(guesses_left.to_string())
+        );
         print!("\n");
 
         view::print(&full_range, &range);
