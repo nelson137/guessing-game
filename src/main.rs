@@ -88,7 +88,7 @@ fn main() {
     loop {
         reset_screen!();
 
-        println!("Guess the number I'm thinking of... {}", rand_num);
+        println!("Guess the number I'm thinking of...");
         print!("\n");
 
         println!("Number of guesses remaining: {}", guesses_left);
