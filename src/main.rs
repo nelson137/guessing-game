@@ -14,6 +14,9 @@ mod view;
 
 #[derive(StructOpt)]
 struct Cli {
+    #[structopt(short, long, conflicts_with("range"))]
+    dynamic: bool,
+
     #[structopt(
         short, long,
         multiple=false, number_of_values=2,
@@ -38,6 +41,25 @@ macro_rules! arg_error {
     )
 }
 
+fn get_dynamic_max() -> i32 {
+    let failed_err = Error::with_description(
+        &format!(
+            "Failed to get terminal width for argument '{}'",
+            Format::Warning("--dynamic")
+        ),
+        ErrorKind::ValueValidation
+    );
+    match term_size::dimensions() {
+        Some((width, _)) => {
+            if width == 0 {
+                failed_err.exit();
+            }
+            (width - num_digits!(width) - 5) as i32
+        },
+        None => failed_err.exit()
+    }
+}
+
 macro_rules! reset_screen {
     () => ( print!("\x1b[H\x1b[J\r") )
 }
@@ -49,7 +71,7 @@ fn main() {
 
     let (min, max): (i32, i32) = match args.range {
         Some(r) => (r[0], r[1]),
-        None => (0, 50)
+        None => (1, if args.dynamic { get_dynamic_max() } else { 50 })
     };
 
     if !(min < max) {

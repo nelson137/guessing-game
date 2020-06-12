@@ -1,6 +1,7 @@
 use crate::color::{Color, Style};
 use crate::span::Span;
 
+#[macro_export]
 macro_rules! num_digits {
     ($num: expr) => ( $num.to_string().len() )
 }
