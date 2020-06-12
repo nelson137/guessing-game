@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::io::{self, Write};
+use structopt::{StructOpt, clap::{Error, ErrorKind, Format}};
 use rand::Rng;
 
 #[macro_use]
@@ -11,13 +12,50 @@ use span::Span;
 
 mod view;
 
+#[derive(StructOpt)]
+struct Cli {
+    #[structopt(
+        short, long,
+        multiple=false, number_of_values=2,
+        value_names=&["min", "max"]
+    )]
+    range: Option<Vec<i32>>,
+}
+
+macro_rules! arg_error {
+    ($app_name: expr, $arg_help: expr, $error: expr) => (
+        Error::with_description(
+            &format!(
+                "The argument '{}' {}\n\n\
+                 USAGE:\n    {} {}\n\n\
+                 For more information try {}",
+                Format::Warning($arg_help), $error,
+                $app_name, $arg_help,
+                Format::Good("--help")
+            ),
+            ErrorKind::ValueValidation
+        ).exit()
+    )
+}
+
 macro_rules! reset_screen {
     () => ( print!("\x1b[H\x1b[J\r") )
 }
 
 fn main() {
-    let min: i32 = 1;
-    let max: i32 = 50;
+    let args = Cli::from_args();
+    let app = Cli::clap();
+    let app_name = app.get_name();
+
+    let (min, max): (i32, i32) = match args.range {
+        Some(r) => (r[0], r[1]),
+        None => (0, 50)
+    };
+
+    if !(min < max) {
+        arg_error!(app_name, "--range <min> <max>", "requires that min < max");
+    }
+
     let full_range = Span { min, max };
     let rand_num: i32 = rand::thread_rng().gen_range(min, max+1);
 
