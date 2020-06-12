@@ -14,8 +14,8 @@ mod view;
 
 #[derive(StructOpt)]
 struct Cli {
-    #[structopt(short, long, conflicts_with("range"))]
-    dynamic: bool,
+    #[structopt(short="w", long, conflicts_with("range"))]
+    fill_width: bool,
 
     #[structopt(
         short, long,
@@ -41,11 +41,11 @@ macro_rules! arg_error {
     )
 }
 
-fn get_dynamic_max() -> i32 {
+fn get_fill_width_max() -> i32 {
     let failed_err = Error::with_description(
         &format!(
             "Failed to get terminal width for argument '{}'",
-            Format::Warning("--dynamic")
+            Format::Warning("--fill-width")
         ),
         ErrorKind::ValueValidation
     );
@@ -67,7 +67,7 @@ fn main() {
 
     let (min, max): (i32, i32) = match args.range {
         Some(r) => (r[0], r[1]),
-        None => (1, if args.dynamic { get_dynamic_max() } else { 50 })
+        None => (1, if args.fill_width { get_fill_width_max() } else { 50 })
     };
 
     if !(min < max) {
